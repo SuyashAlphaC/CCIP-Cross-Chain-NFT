@@ -18,14 +18,7 @@ import {LinkTokenInterface} from "lib/chainlink/contracts/src/v0.8/shared/interf
  * THIS IS AN EXAMPLE CONTRACT THAT USES UN-AUDITED CODE.
  * DO NOT USE THIS CODE IN PRODUCTION.
  */
-contract XNFT is
-    ERC721,
-    ERC721URIStorage,
-    ERC721Burnable,
-    IAny2EVMMessageReceiver,
-    ReentrancyGuard,
-    OwnerIsCreator
-{
+contract XNFT is ERC721, ERC721URIStorage, ERC721Burnable, IAny2EVMMessageReceiver, ReentrancyGuard, OwnerIsCreator {
     using SafeERC20 for IERC20;
 
     enum PayFeesIn {
@@ -35,10 +28,7 @@ contract XNFT is
 
     error InvalidRouter(address router);
     error OnlyOnArbitrumSepolia();
-    error NotEnoughBalanceForFees(
-        uint256 currentBalance,
-        uint256 calculatedFees
-    );
+    error NotEnoughBalanceForFees(uint256 currentBalance, uint256 calculatedFees);
     error NothingToWithdraw();
     error FailedToWithdrawEth(address owner, address target, uint256 value);
     error ChainNotEnabled(uint64 chainSelector);
@@ -65,65 +55,55 @@ contract XNFT is
 
     uint256 private _nextTokenId;
 
-    mapping(uint64 destChainSelector => XNftDetails xNftDetailsPerChain)
-        public s_chains;
+    mapping(uint64 destChainSelector => XNftDetails xNftDetailsPerChain) public s_chains;
 
-    event ChainEnabled(
-        uint64 chainSelector,
-        address xNftAddress,
-        bytes ccipExtraArgs
-    );
+    event ChainEnabled(uint64 chainSelector, address xNftAddress, bytes ccipExtraArgs);
     event ChainDisabled(uint64 chainSelector);
     event CrossChainSent(
-        address from,
-        address to,
-        uint256 tokenId,
-        uint64 sourceChainSelector,
-        uint64 destinationChainSelector
+        address from, address to, uint256 tokenId, uint64 sourceChainSelector, uint64 destinationChainSelector
     );
     event CrossChainReceived(
-        address from,
-        address to,
-        uint256 tokenId,
-        uint64 sourceChainSelector,
-        uint64 destinationChainSelector
+        address from, address to, uint256 tokenId, uint64 sourceChainSelector, uint64 destinationChainSelector
     );
 
     modifier onlyRouter() {
-        if (msg.sender != address(i_ccipRouter))
+        if (msg.sender != address(i_ccipRouter)) {
             revert InvalidRouter(msg.sender);
+        }
         _;
     }
 
     modifier onlyOnArbitrumSepolia() {
-        if (block.chainid != ARBITRUM_SEPOLIA_CHAIN_ID)
+        if (block.chainid != ARBITRUM_SEPOLIA_CHAIN_ID) {
             revert OnlyOnArbitrumSepolia();
+        }
         _;
     }
 
     modifier onlyEnabledChain(uint64 _chainSelector) {
-        if (s_chains[_chainSelector].xNftAddress == address(0))
+        if (s_chains[_chainSelector].xNftAddress == address(0)) {
             revert ChainNotEnabled(_chainSelector);
+        }
         _;
     }
 
     modifier onlyEnabledSender(uint64 _chainSelector, address _sender) {
-        if (s_chains[_chainSelector].xNftAddress != _sender)
+        if (s_chains[_chainSelector].xNftAddress != _sender) {
             revert SenderNotEnabled(_sender);
+        }
         _;
     }
 
     modifier onlyOtherChains(uint64 _chainSelector) {
-        if (_chainSelector == i_currentChainSelector)
+        if (_chainSelector == i_currentChainSelector) {
             revert OperationNotAllowedOnCurrentChain(_chainSelector);
+        }
         _;
     }
 
-    constructor(
-        address ccipRouterAddress,
-        address linkTokenAddress,
-        uint64 currentChainSelector
-    ) ERC721("Cross Chain NFT", "XNFT") {
+    constructor(address ccipRouterAddress, address linkTokenAddress, uint64 currentChainSelector)
+        ERC721("Cross Chain NFT", "XNFT")
+    {
         if (ccipRouterAddress == address(0)) revert InvalidRouter(address(0));
         i_ccipRouter = IRouterClient(ccipRouterAddress);
         i_linkToken = LinkTokenInterface(linkTokenAddress);
@@ -137,22 +117,17 @@ contract XNFT is
         _setTokenURI(tokenId, uri);
     }
 
-    function enableChain(
-        uint64 chainSelector,
-        address xNftAddress,
-        bytes memory ccipExtraArgs
-    ) external onlyOwner onlyOtherChains(chainSelector) {
-        s_chains[chainSelector] = XNftDetails({
-            xNftAddress: xNftAddress,
-            ccipExtraArgsBytes: ccipExtraArgs
-        });
+    function enableChain(uint64 chainSelector, address xNftAddress, bytes memory ccipExtraArgs)
+        external
+        onlyOwner
+        onlyOtherChains(chainSelector)
+    {
+        s_chains[chainSelector] = XNftDetails({xNftAddress: xNftAddress, ccipExtraArgsBytes: ccipExtraArgs});
 
         emit ChainEnabled(chainSelector, xNftAddress, ccipExtraArgs);
     }
 
-    function disableChain(
-        uint64 chainSelector
-    ) external onlyOwner onlyOtherChains(chainSelector) {
+    function disableChain(uint64 chainSelector) external onlyOwner onlyOtherChains(chainSelector) {
         delete s_chains[chainSelector];
 
         emit ChainDisabled(chainSelector);
@@ -164,98 +139,61 @@ contract XNFT is
         uint256 tokenId,
         uint64 destinationChainSelector,
         PayFeesIn payFeesIn
-    )
-        external
-        nonReentrant
-        onlyEnabledChain(destinationChainSelector)
-        returns (bytes32 messageId)
-    {
+    ) external nonReentrant onlyEnabledChain(destinationChainSelector) returns (bytes32 messageId) {
         string memory tokenUri = tokenURI(tokenId);
         _burn(tokenId);
 
         Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
-            receiver: abi.encode(
-                s_chains[destinationChainSelector].xNftAddress
-            ),
+            receiver: abi.encode(s_chains[destinationChainSelector].xNftAddress),
             data: abi.encode(from, to, tokenId, tokenUri),
             tokenAmounts: new Client.EVMTokenAmount[](0),
             extraArgs: s_chains[destinationChainSelector].ccipExtraArgsBytes,
-            feeToken: payFeesIn == PayFeesIn.LINK
-                ? address(i_linkToken)
-                : address(0)
+            feeToken: payFeesIn == PayFeesIn.LINK ? address(i_linkToken) : address(0)
         });
 
         // Get the fee required to send the CCIP message
         uint256 fees = i_ccipRouter.getFee(destinationChainSelector, message);
 
         if (payFeesIn == PayFeesIn.LINK) {
-            if (fees > i_linkToken.balanceOf(address(this)))
-                revert NotEnoughBalanceForFees(
-                    i_linkToken.balanceOf(address(this)),
-                    fees
-                );
+            if (fees > i_linkToken.balanceOf(address(this))) {
+                revert NotEnoughBalanceForFees(i_linkToken.balanceOf(address(this)), fees);
+            }
 
             // Approve the Router to transfer LINK tokens on contract's behalf. It will spend the fees in LINK
             i_linkToken.approve(address(i_ccipRouter), fees);
 
             // Send the message through the router and store the returned message ID
-            messageId = i_ccipRouter.ccipSend(
-                destinationChainSelector,
-                message
-            );
+            messageId = i_ccipRouter.ccipSend(destinationChainSelector, message);
         } else {
-            if (fees > address(this).balance)
+            if (fees > address(this).balance) {
                 revert NotEnoughBalanceForFees(address(this).balance, fees);
+            }
 
             // Send the message through the router and store the returned message ID
-            messageId = i_ccipRouter.ccipSend{value: fees}(
-                destinationChainSelector,
-                message
-            );
+            messageId = i_ccipRouter.ccipSend{value: fees}(destinationChainSelector, message);
         }
 
-        emit CrossChainSent(
-            from,
-            to,
-            tokenId,
-            i_currentChainSelector,
-            destinationChainSelector
-        );
+        emit CrossChainSent(from, to, tokenId, i_currentChainSelector, destinationChainSelector);
     }
 
     /// @inheritdoc IAny2EVMMessageReceiver
-    function ccipReceive(
-        Client.Any2EVMMessage calldata message
-    )
+    function ccipReceive(Client.Any2EVMMessage calldata message)
         external
         virtual
         override
         onlyRouter
         nonReentrant
         onlyEnabledChain(message.sourceChainSelector)
-        onlyEnabledSender(
-            message.sourceChainSelector,
-            abi.decode(message.sender, (address))
-        )
+        onlyEnabledSender(message.sourceChainSelector, abi.decode(message.sender, (address)))
     {
         uint64 sourceChainSelector = message.sourceChainSelector;
-        (
-            address from,
-            address to,
-            uint256 tokenId,
-            string memory tokenUri
-        ) = abi.decode(message.data, (address, address, uint256, string));
+        (address from, address to, uint256 tokenId, string memory tokenUri) =
+            abi.decode(message.data, (address, address, uint256, string));
 
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, tokenUri);
 
-        emit CrossChainReceived(
-            from,
-            to,
-            tokenId,
-            sourceChainSelector,
-            i_currentChainSelector
-        );
+        emit CrossChainReceived(from, to, tokenId, sourceChainSelector, i_currentChainSelector);
     }
 
     function withdraw(address _beneficiary) public onlyOwner {
@@ -263,15 +201,12 @@ contract XNFT is
 
         if (amount == 0) revert NothingToWithdraw();
 
-        (bool sent, ) = _beneficiary.call{value: amount}("");
+        (bool sent,) = _beneficiary.call{value: amount}("");
 
         if (!sent) revert FailedToWithdrawEth(msg.sender, _beneficiary, amount);
     }
 
-    function withdrawToken(
-        address _beneficiary,
-        address _token
-    ) public onlyOwner {
+    function withdrawToken(address _beneficiary, address _token) public onlyOwner {
         uint256 amount = IERC20(_token).balanceOf(address(this));
 
         if (amount == 0) revert NothingToWithdraw();
@@ -279,9 +214,7 @@ contract XNFT is
         IERC20(_token).safeTransfer(_beneficiary, amount);
     }
 
-    function tokenURI(
-        uint256 tokenId
-    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
 
@@ -289,11 +222,7 @@ contract XNFT is
         return address(i_ccipRouter);
     }
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view override(ERC721, ERC721URIStorage) returns (bool) {
-        return
-            interfaceId == type(IAny2EVMMessageReceiver).interfaceId ||
-            super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
+        return interfaceId == type(IAny2EVMMessageReceiver).interfaceId || super.supportsInterface(interfaceId);
     }
 }

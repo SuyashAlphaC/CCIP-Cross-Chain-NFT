@@ -13,11 +13,8 @@ contract DeployXNFT is Script {
         address linkTokenAddressEthereumSepolia = 0x779877A7B0D9E8603169DdbD7836e478b4624789;
         uint64 chainSelectorEthereumSepolia = 16015286601757825753;
 
-        XNFT xNft = new XNFT(
-            ccipRouterAddressEthereumSepolia,
-            linkTokenAddressEthereumSepolia,
-            chainSelectorEthereumSepolia
-        );
+        XNFT xNft =
+            new XNFT(ccipRouterAddressEthereumSepolia, linkTokenAddressEthereumSepolia, chainSelectorEthereumSepolia);
 
         console.log("XNFT deployed to ", address(xNft));
 

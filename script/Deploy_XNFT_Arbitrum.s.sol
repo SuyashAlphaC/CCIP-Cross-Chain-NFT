@@ -15,11 +15,8 @@ contract DeployXNFTArbitrum is Script {
         address linkTokenAddressArbitrumSepolia = 0xb1D4538B4571d411F07960EF2838Ce337FE1E80E;
         uint64 chainSelectorArbitrumSepolia = 3478487238524512106;
 
-        XNFT xNft = new XNFT(
-            ccipRouterAddressArbitrumSepolia,
-            linkTokenAddressArbitrumSepolia,
-            chainSelectorArbitrumSepolia
-        );
+        XNFT xNft =
+            new XNFT(ccipRouterAddressArbitrumSepolia, linkTokenAddressArbitrumSepolia, chainSelectorArbitrumSepolia);
 
         console.log("XNFT deployed to ", address(xNft));
 

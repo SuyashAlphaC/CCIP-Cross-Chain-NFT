@@ -17,12 +17,8 @@ contract EncodeExtraArgs {
     // If different options are required for different messages, for example different gas limits,
     // one can simply key based on (chainSelector, messageType) instead of only chainSelector.
 
-    function encode(
-        uint256 gasLimit
-    ) external pure returns (bytes memory extraArgsBytes) {
-        Client.EVMExtraArgsV1 memory extraArgs = Client.EVMExtraArgsV1({
-            gasLimit: gasLimit
-        });
+    function encode(uint256 gasLimit) external pure returns (bytes memory extraArgsBytes) {
+        Client.EVMExtraArgsV1 memory extraArgs = Client.EVMExtraArgsV1({gasLimit: gasLimit});
         extraArgsBytes = Client._argsToBytes(extraArgs);
     }
 }

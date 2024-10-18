@@ -26,12 +26,8 @@ contract XNFTTest is Test {
         alice = makeAddr("alice");
         bob = makeAddr("bob");
 
-        string memory ETHEREUM_SEPOLIA_RPC_URL = vm.envString(
-            "ETHEREUM_SEPOLIA_RPC_URL"
-        );
-        string memory ARBITRUM_SEPOLIA_RPC_URL = vm.envString(
-            "ARBITRUM_SEPOLIA_RPC_URL"
-        );
+        string memory ETHEREUM_SEPOLIA_RPC_URL = vm.envString("ETHEREUM_SEPOLIA_RPC_URL");
+        string memory ARBITRUM_SEPOLIA_RPC_URL = vm.envString("ARBITRUM_SEPOLIA_RPC_URL");
         ethSepoliaFork = vm.createSelectFork(ETHEREUM_SEPOLIA_RPC_URL);
         arbSepoliaFork = vm.createFork(ARBITRUM_SEPOLIA_RPC_URL);
 
@@ -41,9 +37,7 @@ contract XNFTTest is Test {
         // Step 1) Deploy XNFT.sol to Ethereum Sepolia
         assertEq(vm.activeFork(), ethSepoliaFork);
 
-        ethSepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(
-            block.chainid
-        ); // we are currently on Ethereum Sepolia Fork
+        ethSepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid); // we are currently on Ethereum Sepolia Fork
         assertEq(
             ethSepoliaNetworkDetails.chainSelector,
             16015286601757825753,
@@ -60,9 +54,7 @@ contract XNFTTest is Test {
         vm.selectFork(arbSepoliaFork);
         assertEq(vm.activeFork(), arbSepoliaFork);
 
-        arbSepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(
-            block.chainid
-        ); // we are currently on Arbitrum Sepolia Fork
+        arbSepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid); // we are currently on Arbitrum Sepolia Fork
         assertEq(
             arbSepoliaNetworkDetails.chainSelector,
             3478487238524512106,
@@ -76,9 +68,7 @@ contract XNFTTest is Test {
         );
     }
 
-    function testShouldMintNftOnArbitrumSepoliaAndTransferItToEthereumSepolia()
-        public
-    {
+    function testShouldMintNftOnArbitrumSepoliaAndTransferItToEthereumSepolia() public {
         // Step 3) On Ethereum Sepolia, call enableChain function
         vm.selectFork(ethSepoliaFork);
         assertEq(vm.activeFork(), ethSepoliaFork);
@@ -87,34 +77,20 @@ contract XNFTTest is Test {
 
         uint256 gasLimit = 200_000;
         bytes memory extraArgs = encodeExtraArgs.encode(gasLimit);
-        assertEq(
-            extraArgs,
-            hex"97a657c90000000000000000000000000000000000000000000000000000000000030d40"
-        ); // value taken from https://cll-devrel.gitbook.io/ccip-masterclass-3/ccip-masterclass/exercise-xnft#step-3-on-ethereum-sepolia-call-enablechain-function
+        assertEq(extraArgs, hex"97a657c90000000000000000000000000000000000000000000000000000000000030d40"); // value taken from https://cll-devrel.gitbook.io/ccip-masterclass-3/ccip-masterclass/exercise-xnft#step-3-on-ethereum-sepolia-call-enablechain-function
 
-        ethSepoliaXNFT.enableChain(
-            arbSepoliaNetworkDetails.chainSelector,
-            address(arbSepoliaXNFT),
-            extraArgs
-        );
+        ethSepoliaXNFT.enableChain(arbSepoliaNetworkDetails.chainSelector, address(arbSepoliaXNFT), extraArgs);
 
         // Step 4) On Arbitrum Sepolia, call enableChain function
         vm.selectFork(arbSepoliaFork);
         assertEq(vm.activeFork(), arbSepoliaFork);
 
-        arbSepoliaXNFT.enableChain(
-            ethSepoliaNetworkDetails.chainSelector,
-            address(ethSepoliaXNFT),
-            extraArgs
-        );
+        arbSepoliaXNFT.enableChain(ethSepoliaNetworkDetails.chainSelector, address(ethSepoliaXNFT), extraArgs);
 
         // Step 5) On Arbitrum Sepolia, fund XNFT.sol with 3 LINK
         assertEq(vm.activeFork(), arbSepoliaFork);
 
-        ccipLocalSimulatorFork.requestLinkFromFaucet(
-            address(arbSepoliaXNFT),
-            3 ether
-        );
+        ccipLocalSimulatorFork.requestLinkFromFaucet(address(arbSepoliaXNFT), 3 ether);
 
         // Step 6) On Arbitrum Sepolia, mint new xNFT
         assertEq(vm.activeFork(), arbSepoliaFork);
@@ -128,11 +104,7 @@ contract XNFTTest is Test {
 
         // Step 7) On Arbitrum Sepolia, crossTransferFrom xNFT
         arbSepoliaXNFT.crossChainTransferFrom(
-            address(alice),
-            address(bob),
-            tokenId,
-            ethSepoliaNetworkDetails.chainSelector,
-            XNFT.PayFeesIn.LINK
+            address(alice), address(bob), tokenId, ethSepoliaNetworkDetails.chainSelector, XNFT.PayFeesIn.LINK
         );
 
         vm.stopPrank();
