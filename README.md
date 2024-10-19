@@ -33,6 +33,34 @@ ARBITRUM_SEPOLIA_RPC_URL=""
 forge test
 ```
 
+5. Deploy on testnets
+   On Ethereum Sepolia
+   ```
+   forge script ./script/Deploy_XNFT.s.sol:DeployXNFT -vvv --broadcast --rpc-url ethereumSepolia
+   ```
+   On arbitrum Sepolia
+   ```
+   forge script ./script/Deploy_XNFT_Arbitrum.s.sol:DeployXNFTArbitrum -vvv --broadcast --rpc-url arbitrumSepolia
+   ```
+6. Call EnableChain Function on Sepolia using the address of the sepolia XNFT contract you deployed.
+   ```
+   cast send <XNFT_ADDRESS_ON_ETHEREUM_SEPOLIA> --rpc-url ethereumSepolia --private-key=$PRIVATE_KEY "enableChain(uint64,address,bytes)" 3478487238524512106 <XNFT_ADDRESS_ON_ARBITRUM_SEPOLIA> 0x97a657c90000000000000000000000000000000000000000000000000000000000030d40
+   ```
+7. Call EnableChain Function on Arbitrum using the address of the Arbitrum XNFT contract you deployed.
+   ```
+   cast send <XNFT_ADDRESS_ON_ARBITRUM_SEPOLIA> --rpc-url arbitrumSepolia --private-key=$PRIVATE_KEY "enableChain(uint64,address,bytes)" 16015286601757825753 <XNFT_ADDRESS_ON_ETHEREUM_SEPOLIA> 0x97a657c90000000000000000000000000000000000000000000000000000000000030d40
+   ```
+8.Fund the Arbitrum Sepolia contract with few link tokens
+9.Mint a New XNFT on Arbitrum Sepolia 
+```
+cast send <XNFT_ADDRESS_ON_ARBITRUM_SEPOLIA> --rpc-url arbitrumSepolia --private-key=$PRIVATE_KEY "mint()"
+```
+10. Call crossTransferFrom Function on the same contract paying in LINK tokens.
+   ```
+cast send <XNFT_ADDRESS_ON_ARBITRUM_SEPOLIA> --rpc-url arbitrumSepolia --private-key=$PRIVATE_KEY "crossChainTransferFrom(address,address,uint256,uint64,uint8)" <YOUR_EOA_ADDRESS> <RECEIVER_ADDRESS> 0 16015286601757825753 1
+```
+11. Wait for the confirmation on CCIP Explorer and then manually import the NFT from your metamask wallet at sepolia network using the token Address as the XNFT address deployed on Sepolia Chain.
+    
 ## How Do Cross-Chain NFTs Work?
 
 At a high level, an NFT is a digital token on a blockchain with a unique identifier different from any other token on the chain.
